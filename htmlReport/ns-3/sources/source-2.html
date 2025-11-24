@@ -1,0 +1,213 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > JogoController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.jpribeiro.controller</a>
+</div>
+
+<h1>Coverage Summary for Class: JogoController (com.jpribeiro.controller)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">JogoController</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (5/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    75%
+  </span>
+  <span class="absValue">
+    (3/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (49/49)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.jpribeiro.controller;
+&nbsp;
+&nbsp;import com.jpribeiro.service.JogoService;
+&nbsp;import com.jpribeiro.view.JogoView;
+&nbsp;import io.javalin.Javalin;
+&nbsp;
+&nbsp;import java.util.HashMap;
+&nbsp;
+&nbsp;public class JogoController {
+&nbsp;    private final JogoService service;
+&nbsp;
+<b class="fc">&nbsp;    public JogoController(Javalin app, JogoService service) {</b>
+<b class="fc">&nbsp;        this.service = service;</b>
+&nbsp;
+<b class="fc">&nbsp;        app.get(&quot;/jogos&quot;, ctx -&gt; ctx.html(JogoView.renderList(service.findAllJogos())));</b>
+&nbsp;
+<b class="fc">&nbsp;        app.get(&quot;/jogos/adicionar&quot;, ctx -&gt; ctx.html(JogoView.renderForm(new HashMap&lt;&gt;())));</b>
+&nbsp;
+<b class="fc">&nbsp;        app.post(&quot;/jogos&quot;, ctx -&gt; {</b>
+<b class="fc">&nbsp;            String jogo = ctx.formParam(&quot;jogo&quot;);</b>
+<b class="fc">&nbsp;            String descricao = ctx.formParam(&quot;descricao&quot;);</b>
+&nbsp;
+<b class="fc">&nbsp;            HashMap&lt;String, Object&gt; model = new HashMap&lt;&gt;();</b>
+&nbsp;
+&nbsp;            try {
+<b class="fc">&nbsp;                double preco = ctx.formParamAsClass(&quot;preco&quot;, Double.class)</b>
+<b class="fc">&nbsp;                        .check(p -&gt; p &gt; 0, &quot;Preço deve ser maior que zero&quot;)</b>
+<b class="fc">&nbsp;                        .get();</b>
+&nbsp;
+<b class="fc">&nbsp;                service.addJogo(jogo, preco, descricao);</b>
+<b class="fc">&nbsp;                ctx.redirect(&quot;/jogos&quot;);</b>
+&nbsp;
+&nbsp;            } catch (Exception e) {
+<b class="fc">&nbsp;                model.put(&quot;erro&quot;, &quot;Erro ao adicionar jogo: &quot; + e.getMessage());</b>
+&nbsp;
+<b class="fc">&nbsp;                model.put(&quot;jogo&quot;, jogo);</b>
+<b class="fc">&nbsp;                model.put(&quot;descricao&quot;, descricao);</b>
+<b class="fc">&nbsp;                model.put(&quot;preco&quot;, ctx.formParam(&quot;preco&quot;));</b>
+&nbsp;
+<b class="fc">&nbsp;                ctx.html(JogoView.renderForm(model));</b>
+&nbsp;            }
+&nbsp;        });
+&nbsp;
+<b class="fc">&nbsp;        app.get(&quot;/jogos/editar/{id}&quot;, ctx -&gt; {</b>
+<b class="fc">&nbsp;            int id = Integer.parseInt(ctx.pathParam(&quot;id&quot;));</b>
+<b class="fc">&nbsp;            HashMap&lt;String, Object&gt; model = new HashMap&lt;&gt;();</b>
+&nbsp;
+&nbsp;            try {
+<b class="fc">&nbsp;                var jogo = service.findJogoById(id);</b>
+<b class="fc">&nbsp;                model.put(&quot;id&quot;, jogo.getId());</b>
+<b class="fc">&nbsp;                model.put(&quot;jogo&quot;, jogo.getJogo());</b>
+<b class="fc">&nbsp;                model.put(&quot;preco&quot;, jogo.getPreco());</b>
+<b class="fc">&nbsp;                model.put(&quot;descricao&quot;, jogo.getDescricao());</b>
+<b class="fc">&nbsp;                ctx.html(JogoView.renderForm(model));</b>
+&nbsp;            } catch (Exception e) {
+<b class="fc">&nbsp;                ctx.result(&quot;Erro: &quot; + e.getMessage());</b>
+&nbsp;            }
+&nbsp;        });
+&nbsp;
+<b class="fc">&nbsp;        app.post(&quot;/jogos/editar/{id}&quot;, ctx -&gt; {</b>
+<b class="fc">&nbsp;            int id = Integer.parseInt(ctx.pathParam(&quot;id&quot;));</b>
+<b class="fc">&nbsp;            String jogo = ctx.formParam(&quot;jogo&quot;);</b>
+<b class="fc">&nbsp;            String descricao = ctx.formParam(&quot;descricao&quot;);</b>
+&nbsp;
+<b class="fc">&nbsp;            HashMap&lt;String, Object&gt; model = new HashMap&lt;&gt;();</b>
+&nbsp;
+&nbsp;            try {
+<b class="fc">&nbsp;                double preco = ctx.formParamAsClass(&quot;preco&quot;, Double.class)</b>
+<b class="pc">&nbsp;                        .check(p -&gt; p &gt; 0, &quot;Preço deve ser maior que zero&quot;)</b>
+<b class="fc">&nbsp;                        .get();</b>
+&nbsp;
+<b class="fc">&nbsp;                service.updateJogo(id, jogo, preco, descricao);</b>
+<b class="fc">&nbsp;                ctx.redirect(&quot;/jogos&quot;);</b>
+&nbsp;
+&nbsp;            } catch (Exception e) {
+<b class="fc">&nbsp;                model.put(&quot;erro&quot;, &quot;Erro ao atualizar jogo: &quot; + e.getMessage());</b>
+<b class="fc">&nbsp;                model.put(&quot;id&quot;, id);</b>
+<b class="fc">&nbsp;                model.put(&quot;jogo&quot;, jogo);</b>
+<b class="fc">&nbsp;                model.put(&quot;descricao&quot;, descricao);</b>
+<b class="fc">&nbsp;                model.put(&quot;preco&quot;, ctx.formParam(&quot;preco&quot;));</b>
+&nbsp;
+<b class="fc">&nbsp;                ctx.html(JogoView.renderForm(model));</b>
+&nbsp;            }
+&nbsp;        });
+&nbsp;
+<b class="fc">&nbsp;        app.post(&quot;/jogos/excluir/{id}&quot;, ctx -&gt; {</b>
+<b class="fc">&nbsp;            int id = Integer.parseInt(ctx.pathParam(&quot;id&quot;));</b>
+&nbsp;
+&nbsp;            try {
+<b class="fc">&nbsp;                service.deleteJogo(id);</b>
+<b class="fc">&nbsp;                ctx.redirect(&quot;/jogos&quot;);</b>
+&nbsp;            } catch (Exception e) {
+<b class="fc">&nbsp;                ctx.result(&quot;Erro ao excluir jogo: &quot; + e.getMessage());</b>
+&nbsp;            }
+&nbsp;        });
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-11-24 16:32</div>
+</div>
+</body>
+</html>
