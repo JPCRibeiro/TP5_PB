@@ -77,20 +77,26 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: app-build
+          path: build/libs/
 
       - name: Start app
         run: |
-          nohup java -jar *.jar > logs.txt 2>&1 &
+          nohup java -jar build/libs/*.jar > logs.txt 2>&1 &
           echo $! > app.pid
 
       - name: Esperar app
         run: |
-          for i in {1..60}; do
-            if curl -sSf http://localhost:7000 > /dev/null 2>&1; then
-              break
-            fi
-            sleep 2
+          for i in {1..30}; do
+          if curl -s http://localhost:7000 > /dev/null; then
+          echo "App iniciado!"
+          exit 0
+          fi
+          echo "Aguardando aplicação..."
+          sleep 2
           done
+          echo "A aplicação não iniciou!"
+          cat logs.txt
+          exit 1
 
       - name: Criar report dir
         run: mkdir -p zap-reports
