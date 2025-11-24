@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['java']
+        language: [ 'java' ]
 
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +37,9 @@ jobs:
       - uses: github/codeql-action/init@v3
         with:
           languages: ${{matrix.language}}
+
+      - name: Build para CodeQL
+        run: ./gradlew clean assemble --no-daemon
 
       - uses: github/codeql-action/analyze@v3
 
