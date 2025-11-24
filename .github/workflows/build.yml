@@ -1,0 +1,185 @@
+name: CI-CD Pipeline
+
+on:
+  push:
+    branches: ['master']
+  pull_request:
+    branches: ['master']
+  release:
+    types: [published]
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: SAST - CodeQL
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['java']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{matrix.language}}
+
+      - uses: github/codeql-action/analyze@v3
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build com Gradle
+        run: ./gradlew build --no-daemon
+
+      - name: Rodar testes
+        run: ./gradlew test --no-daemon
+
+      - name: Upload artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build
+          path: build/libs/*.jar
+
+  dast:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Baixar artefato
+        uses: actions/download-artifact@v4
+        with:
+          name: app-build
+
+      - name: Start app
+        run: |
+          nohup java -jar *.jar > logs.txt 2>&1 &
+          echo $! > app.pid
+
+      - name: Esperar app
+        run: |
+          for i in {1..60}; do
+            if curl -sSf http://localhost:7000 > /dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Criar report dir
+        run: mkdir -p zap-reports
+
+      - name: OWASP ZAP Baseline
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd)/zap-reports:/zap/wrk:rw \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t http://localhost:7000 \
+              -r zap_report.html \
+              -J zap_report.json \
+              -w zap_report.md \
+              -d || true
+
+      - name: Stop app
+        run: kill $(cat app.pid) || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zap-dast-reports
+          path: zap-reports/
+
+  deploy-test:
+    needs: [build, analyze, dast]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    environment: testing
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-build
+
+      - name: Deploy TEST
+        run: echo "Deploy em TESTE concluído"
+
+      - name: Start app para Selenium
+        run: |
+          nohup java -jar *.jar > selenium-log.txt 2>&1 &
+          echo $! > app.pid
+
+      - name: Esperar app subir
+        run: |
+          for i in {1..30}; do
+            if curl -sSf http://localhost:7000 > /dev/null 2>&1; then break; fi
+            sleep 2
+          done
+
+      - name: Testes pós-deploy com Selenium
+        run: ./gradlew check --no-daemon
+
+      - name: Stop app
+        run: kill $(cat app.pid) || true
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    environment: development
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-build
+
+      - name: Deploy DEV
+        run: echo "Deploy em DEV concluído"
+
+      - name: Testes pós-deploy similares ao TEST
+        run: echo "Executaria Selenium aqui também"
+
+  deploy-prod:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    environment:
+      name: production
+      url: https://app-prod.com
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-build
+
+      - name: Deploy PRODUÇÃO
+        run: echo "Deploy em PRODUÇÃO concluído após aprovação manual"
+
+      - name: Testes pós-deploy (opcional)
+        run: echo "Executaria Selenium aqui também"
